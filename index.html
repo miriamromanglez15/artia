@@ -1742,7 +1742,7 @@ async function sendMessage() {
         'X-Title': 'ArtIA'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-001',
+        model: 'google/gemini-2.5-flash-lite',
         messages: chatHistory,
         temperature: 0.8,
         max_tokens: 1024
@@ -1901,7 +1901,7 @@ async function analyzeImage() {
         'X-Title': 'ArtIA'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-001',
+        model: 'google/gemini-2.5-flash-lite',
         messages: messages,
         temperature: 0.7,
         max_tokens: 1500
