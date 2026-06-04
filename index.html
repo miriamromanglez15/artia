@@ -1750,7 +1750,15 @@ async function sendMessage() {
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const errData = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        throw new Error('API_KEY_INVALID');
+      } else if (response.status === 402) {
+        throw new Error('API_NO_CREDIT');
+      } else if (response.status === 429) {
+        throw new Error('API_RATE_LIMIT');
+      }
+      throw new Error(`API error: ${response.status}: ${errData?.error?.message || ''}`);
     }
 
     const data = await response.json();
@@ -1762,7 +1770,15 @@ async function sendMessage() {
 
   } catch (err) {
     hideTyping();
-    addMessage('bot', 'Lo siento, hubo un error de conexión. Verifica tu API key e intenta de nuevo. 🎨');
+    let msg = 'Lo siento, hubo un error de conexión. Verifica tu API key e intenta de nuevo. 🎨';
+    if (err.message === 'API_KEY_INVALID') {
+      msg = 'Tu API key no es válida o ha expirado. Ve a openrouter.ai/settings/keys para crear una nueva y asegúrate de pegarla correctamente.';
+    } else if (err.message === 'API_NO_CREDIT') {
+      msg = 'Tu API key no tiene créditos. En openrouter.ai puedes cargar crédito o usar el tier gratuito (Free tier).';
+    } else if (err.message === 'API_RATE_LIMIT') {
+      msg = 'Demasiadas solicitudes. Espera unos segundos y vuelve a intentar.';
+    }
+    addMessage('bot', msg);
     console.error(err);
   }
 
@@ -1892,7 +1908,17 @@ async function analyzeImage() {
       })
     });
 
-    if (!response.ok) throw new Error(`Error ${response.status}`);
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        throw new Error('API_KEY_INVALID');
+      } else if (response.status === 402) {
+        throw new Error('API_NO_CREDIT');
+      } else if (response.status === 429) {
+        throw new Error('API_RATE_LIMIT');
+      }
+      throw new Error(`Error ${response.status}: ${errData?.error?.message || ''}`);
+    }
 
     const data = await response.json();
     const analysis = data.choices[0]?.message?.content || 'No se pudo analizar la imagen.';
@@ -1919,7 +1945,15 @@ async function analyzeImage() {
     addMessage('bot', `📊 **Análisis de tu pintura:**\n\n${analysis.substring(0, 600)}...\n\nResultado completo mostrado arriba.`);
 
   } catch (err) {
-    contentEl.innerHTML = '<div class="finding" style="border-left-color:var(--accent-rose)">Error en el análisis. Verifica tu API key y conexión, e intenta de nuevo.</div>';
+    let msg = 'Error en el análisis. Verifica tu API key y conexión, e intenta de nuevo.';
+    if (err.message === 'API_KEY_INVALID') {
+      msg = 'Tu API key no es válida o ha expirado. Ve a openrouter.ai/settings/keys para crear una nueva.';
+    } else if (err.message === 'API_NO_CREDIT') {
+      msg = 'Tu API key no tiene créditos. En openrouter.ai puedes cargar crédito o usar el tier gratuito.';
+    } else if (err.message === 'API_RATE_LIMIT') {
+      msg = 'Demasiadas solicitudes. Espera unos segundos y vuelve a intentar.';
+    }
+    contentEl.innerHTML = `<div class="finding" style="border-left-color:var(--accent-rose)">${msg}</div>`;
     console.error(err);
   }
 
