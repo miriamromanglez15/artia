@@ -1,0 +1,2302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArtIA — El Ojo que Ve lo Invisible</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap');
+
+:root {
+  --bg-primary: #0a0a0c;
+  --bg-secondary: #12121a;
+  --bg-tertiary: #1a1a2e;
+  --bg-card: #16162a;
+  --text-primary: #e8e6e3;
+  --text-secondary: #9a9aaf;
+  --text-muted: #5a5a72;
+  --accent-gold: #c9a84c;
+  --accent-gold-dim: #8a6f2e;
+  --accent-cyan: #4ecdc4;
+  --accent-violet: #8b5cf6;
+  --accent-rose: #e0568a;
+  --accent-blue: #3b82f6;
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-gold: rgba(201,168,76,0.2);
+  --glow-gold: rgba(201,168,76,0.15);
+  --glow-cyan: rgba(78,205,196,0.12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* === ANIMATED BACKGROUND === */
+.bg-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(201,168,76,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(78,205,196,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(139,92,246,0.03) 0%, transparent 60%),
+    var(--bg-primary);
+}
+
+.bg-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+  animation: orbFloat 20s ease-in-out infinite;
+}
+.bg-orb-1 { width: 600px; height: 600px; background: rgba(201,168,76,0.08); top: -200px; left: -100px; animation-delay: 0s; }
+.bg-orb-2 { width: 500px; height: 500px; background: rgba(78,205,196,0.06); bottom: -200px; right: -100px; animation-delay: -10s; }
+.bg-orb-3 { width: 400px; height: 400px; background: rgba(139,92,246,0.05); top: 50%; left: 50%; animation-delay: -5s; }
+
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(50px, -30px) scale(1.05); }
+  66% { transform: translate(-30px, 50px) scale(0.95); }
+}
+
+/* === GRAIN OVERLAY === */
+.grain {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* === NAVIGATION === */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(10,10,12,0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: all 0.3s ease;
+}
+
+nav.scrolled { padding: 0.6rem 2rem; }
+
+.nav-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 300;
+  letter-spacing: 0.15em;
+  color: var(--accent-gold);
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.nav-logo span { font-weight: 600; color: var(--accent-cyan); }
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
+  list-style: none;
+}
+.nav-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: color 0.3s;
+  position: relative;
+}
+.nav-links a:hover { color: var(--accent-gold); }
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; left: 0;
+  width: 0; height: 1px;
+  background: var(--accent-gold);
+  transition: width 0.3s;
+}
+.nav-links a:hover::after { width: 100%; }
+
+.nav-api-key {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.nav-api-key input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  padding: 0.4rem 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  width: 180px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+.nav-api-key input:focus { border-color: var(--accent-gold); }
+.nav-api-key input::placeholder { color: var(--text-muted); }
+
+/* === HERO === */
+.hero {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 6rem 2rem 4rem;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--border-gold);
+  border-radius: 50px;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin-bottom: 2rem;
+  opacity: 0;
+  animation: fadeUp 1s 0.3s forwards;
+}
+.hero-badge .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.hero h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.5rem;
+  opacity: 0;
+  animation: fadeUp 1s 0.5s forwards;
+}
+.hero h1 em {
+  font-style: italic;
+  color: var(--accent-gold);
+}
+.hero h1 .accent-cyan { color: var(--accent-cyan); font-weight: 600; }
+
+.hero p {
+  max-width: 600px;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  font-weight: 300;
+  line-height: 1.9;
+  margin-bottom: 3rem;
+  opacity: 0;
+  animation: fadeUp 1s 0.7s forwards;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  opacity: 0;
+  animation: fadeUp 1s 0.9s forwards;
+}
+
+.btn {
+  padding: 0.9rem 2.2rem;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-dim));
+  color: #0a0a0c;
+}
+.btn-primary:hover {
+  box-shadow: 0 0 40px rgba(201,168,76,0.3);
+  transform: translateY(-2px);
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+.btn-secondary:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scroll-indicator {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: fadeUp 1s 1.2s forwards;
+}
+.scroll-indicator .arrow {
+  width: 20px; height: 20px;
+  border-right: 1px solid var(--text-muted);
+  border-bottom: 1px solid var(--text-muted);
+  transform: rotate(45deg);
+  animation: scrollBounce 2s infinite;
+}
+
+@keyframes scrollBounce {
+  0%, 100% { transform: rotate(45deg) translate(0, 0); }
+  50% { transform: rotate(45deg) translate(4px, 4px); }
+}
+
+/* === SECTIONS === */
+section {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 6rem 2rem;
+}
+
+.section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin-bottom: 1.5rem;
+}
+.section-label::before {
+  content: '';
+  width: 30px; height: 1px;
+  background: var(--accent-gold);
+}
+
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 300;
+  line-height: 1.2;
+  margin-bottom: 1.2rem;
+}
+.section-title em { font-style: italic; color: var(--accent-cyan); }
+
+.section-desc {
+  max-width: 650px;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.8;
+  margin-bottom: 3rem;
+}
+
+/* === CHAT SECTION === */
+.chat-section { padding-top: 4rem; }
+
+.chat-container {
+  max-width: 900px;
+  margin: 0 auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.chat-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.chat-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.chat-title-text h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+.chat-title-text .subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.chat-status { margin-left: auto; display: flex; align-items: center; gap: 0.4rem; }
+.chat-status .status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  animation: pulse 2s infinite;
+}
+.chat-status span { font-size: 0.75rem; color: var(--text-muted); }
+
+.chat-messages {
+  height: 500px;
+  overflow-y: auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  scroll-behavior: smooth;
+}
+
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-track { background: transparent; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 4px; }
+
+.message {
+  display: flex;
+  gap: 1rem;
+  max-width: 85%;
+  animation: fadeUp 0.4s ease;
+}
+.message.user { align-self: flex-end; flex-direction: row-reverse; }
+.message.bot { align-self: flex-start; }
+
+.message-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+.message.bot .message-avatar { background: linear-gradient(135deg, var(--accent-gold), var(--accent-violet)); }
+.message.user .message-avatar { background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue)); }
+
+.message-content {
+  padding: 1rem 1.3rem;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.message.bot .message-content {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-bottom-left-radius: 4px;
+}
+.message.user .message-content {
+  background: rgba(78,205,196,0.1);
+  border: 1px solid rgba(78,205,196,0.15);
+  border-bottom-right-radius: 4px;
+}
+
+.message-content strong { color: var(--accent-gold); }
+.message-content em { color: var(--accent-cyan); }
+
+.typing-indicator {
+  display: flex;
+  gap: 0.3rem;
+  padding: 1rem 1.3rem;
+}
+.typing-indicator span {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: typingBounce 1.4s infinite;
+}
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-8px); opacity: 1; }
+}
+
+.chat-input-area {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+}
+.chat-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+.chat-input {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  resize: none;
+  min-height: 52px;
+  max-height: 150px;
+  line-height: 1.5;
+  transition: border-color 0.3s;
+  overflow-y: hidden;
+}
+.chat-input:focus { border-color: var(--accent-gold); }
+.chat-input::placeholder { color: var(--text-muted); }
+
+.chat-send-btn {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-dim));
+  border: none;
+  color: #0a0a0c;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+.chat-send-btn:hover { box-shadow: 0 0 25px rgba(201,168,76,0.3); transform: scale(1.05); }
+.chat-send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+.chat-suggestions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0 2rem 1.5rem;
+}
+.suggestion-chip {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: 'Inter', sans-serif;
+}
+.suggestion-chip:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+  background: rgba(201,168,76,0.05);
+}
+
+/* === UPLOAD SECTION === */
+.image-analysis-section { margin-top: 3rem; }
+
+.upload-zone {
+  max-width: 600px;
+  margin: 0 auto;
+  border: 2px dashed var(--border-subtle);
+  border-radius: 20px;
+  padding: 3rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--accent-cyan);
+  background: rgba(78,205,196,0.03);
+}
+.upload-zone.has-image {
+  border-style: solid;
+  border-color: var(--accent-gold);
+  padding: 1rem;
+}
+
+.upload-icon { font-size: 3rem; margin-bottom: 1rem; }
+.upload-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+.upload-subtext { font-size: 0.85rem; color: var(--text-muted); }
+
+.uploaded-preview {
+  position: relative;
+  display: none;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.upload-zone.has-image .uploaded-preview { display: block; }
+.upload-zone.has-image .upload-icon,
+.upload-zone.has-image .upload-text,
+.upload-zone.has-image .upload-subtext { display: none; }
+
+.uploaded-preview img {
+  width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--bg-primary);
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 0.5rem; right: 0.5rem;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: rgba(10,10,12,0.8);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.analyze-btn-container {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+#fileInput { display: none; }
+
+/* === INVISIBLE REVEALS === */
+.reveals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.reveal-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.4s ease;
+  cursor: pointer;
+  position: relative;
+}
+.reveal-card:hover {
+  border-color: var(--accent-gold);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.reveal-image-container {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4/3;
+}
+.reveal-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s, filter 0.6s;
+}
+.reveal-card:hover .reveal-image {
+  transform: scale(1.05);
+}
+
+/* Comparison slider */
+.compare-container {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4/3;
+}
+.compare-before, .compare-after {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.compare-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  cursor: ew-resize;
+}
+.compare-slider {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 50%;
+  width: 3px;
+  background: var(--accent-gold);
+  cursor: ew-resize;
+  z-index: 5;
+}
+.compare-slider::after {
+  content: '\u2194';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0a0a0c;
+  font-size: 0.8rem;
+}
+
+.reveal-info {
+  padding: 1.5rem;
+}
+.reveal-type {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.reveal-type.infrarrojo { color: var(--accent-rose); }
+.reveal-type.rayos-x { color: var(--accent-violet); }
+.reveal-type.microscopio { color: var(--accent-cyan); }
+.reveal-type.ultravioleta { color: var(--accent-gold); }
+
+.reveal-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem;
+  font-weight: 400;
+  margin-bottom: 0.3rem;
+}
+.reveal-painter { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem; }
+.reveal-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.7; }
+
+/* === HOW SECTION === */
+.how-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+.step-card {
+  padding: 2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  text-align: center;
+  transition: all 0.3s;
+}
+.step-card:hover { border-color: var(--accent-cyan); transform: translateY(-3px); }
+.step-number {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3rem;
+  font-weight: 300;
+  color: var(--accent-gold);
+  opacity: 0.5;
+  line-height: 1;
+  margin-bottom: 0.8rem;
+}
+.step-icon { font-size: 2rem; margin-bottom: 0.8rem; }
+.step-title { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; margin-bottom: 0.5rem; }
+.step-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.7; }
+
+/* === METHODOLOGY === */
+.methodology {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 3rem;
+  margin-top: 2rem;
+}
+.methodology-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+.method-layer { padding: 1.5rem; }
+.method-layer-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem;
+  font-style: italic;
+  margin-bottom: 0.8rem;
+}
+.layer-curadoria { color: var(--accent-gold); }
+.layer-interrogador { color: var(--accent-cyan); }
+.layer-motor { color: var(--accent-violet); }
+.method-layer p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7; }
+.method-tags {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.method-tag {
+  padding: 0.2rem 0.7rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.04);
+  color: var(--text-muted);
+}
+
+/* === FOOTER === */
+footer {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 4rem 2rem;
+  border-top: 1px solid var(--border-subtle);
+}
+footer .footer-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  color: var(--accent-gold);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+footer p { font-size: 0.8rem; color: var(--text-muted); }
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .nav-api-key input { width: 120px; }
+  .hero h1 { font-size: 2.5rem; }
+  .chat-messages { height: 400px; padding: 1rem; }
+  .chat-suggestions { padding: 0 1rem 1rem; }
+  .chat-input-area { padding: 1rem; }
+  section { padding: 4rem 1.5rem; }
+  .methodology { padding: 2rem; }
+}
+
+/* === API KEY MODAL === */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(10,10,12,0.85);
+  backdrop-filter: blur(10px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-gold);
+  border-radius: 20px;
+  padding: 3rem;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  transform: translateY(20px);
+  transition: transform 0.4s;
+}
+.modal-overlay.active .modal { transform: translateY(0); }
+
+.modal-icon { font-size: 3rem; margin-bottom: 1rem; }
+.modal h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.8rem;
+  font-weight: 300;
+  margin-bottom: 0.8rem;
+}
+.modal p { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.7; margin-bottom: 1.5rem; }
+
+.modal-input-group { margin-bottom: 1.5rem; }
+.modal-input-group input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  outline: none;
+  text-align: center;
+}
+.modal-input-group input:focus { border-color: var(--accent-gold); }
+
+.modal-buttons { display: flex; gap: 1rem; justify-content: center; }
+.modal-link {
+  display: block;
+  margin-top: 1rem;
+  color: var(--accent-cyan);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+.modal-link:hover { text-decoration: underline; }
+
+/* === ANALYSIS RESULT === */
+.analysis-result {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-top: 1.5rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  display: none;
+}
+.analysis-result.visible { display: block; animation: fadeUp 0.5s; }
+.analysis-result h4 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem;
+  color: var(--accent-gold);
+  margin-bottom: 1rem;
+}
+.analysis-result .finding {
+  padding: 0.8rem 1rem;
+  background: rgba(255,255,255,0.02);
+  border-left: 3px solid var(--accent-cyan);
+  margin-bottom: 0.6rem;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.analysis-result .finding strong { color: var(--accent-gold); }
+
+/* === REVEAL MODAL === */
+.reveal-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(10,10,12,0.92);
+  backdrop-filter: blur(15px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+  padding: 2rem;
+  overflow-y: auto;
+}
+.reveal-modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.reveal-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-gold);
+  border-radius: 24px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: translateY(30px) scale(0.98);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+.reveal-modal-overlay.active .reveal-modal {
+  transform: translateY(0) scale(1);
+}
+
+.reveal-modal::-webkit-scrollbar { width: 4px; }
+.reveal-modal::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 4px; }
+
+.reveal-modal-hero {
+  position: relative;
+  overflow: hidden;
+}
+.reveal-modal-hero img {
+  width: 100%;
+  max-height: 350px;
+  object-fit: cover;
+  display: block;
+}
+.reveal-modal-hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 100px;
+  background: linear-gradient(transparent, var(--bg-secondary));
+}
+.reveal-modal-close {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(10,10,12,0.7);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  z-index: 5;
+}
+.reveal-modal-close:hover { background: var(--accent-gold); color: #0a0a0c; border-color: var(--accent-gold); }
+
+.reveal-modal-body {
+  padding: 0 2.5rem 2.5rem;
+  margin-top: -30px;
+  position: relative;
+  z-index: 2;
+}
+.reveal-modal-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.reveal-modal-type {
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.type-infrarrojo { background: rgba(224,86,138,0.15); color: var(--accent-rose); }
+.type-rayos-x { background: rgba(139,92,246,0.15); color: var(--accent-violet); }
+.type-microscopio { background: rgba(78,205,196,0.15); color: var(--accent-cyan); }
+.type-ultravioleta { background: rgba(201,168,76,0.15); color: var(--accent-gold); }
+
+.reveal-modal-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  font-weight: 400;
+  margin-bottom: 0.2rem;
+}
+.reveal-modal-painter {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+}
+
+.reveal-findings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.reveal-finding-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  transition: border-color 0.3s;
+}
+.reveal-finding-item:hover { border-color: var(--accent-cyan); }
+.reveal-finding-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.finding-icon-uv { background: rgba(201,168,76,0.12); }
+.finding-icon-ir { background: rgba(224,86,138,0.12); }
+.finding-icon-xr { background: rgba(139,92,246,0.12); }
+.finding-icon-mic { background: rgba(78,205,196,0.12); }
+.finding-icon-che { background: rgba(59,130,246,0.12); }
+
+.reveal-finding-text h5 {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.2rem;
+  color: var(--text-primary);
+}
+.reveal-finding-text p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Visual Dialogue Mode */
+.dialogue-section {
+  margin-top: 3rem;
+}
+.dialogue-container {
+  max-width: 700px;
+  margin: 0 auto;
+}
+.dialogue-progress {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.dialogue-step-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--border-subtle);
+  transition: all 0.4s;
+}
+.dialogue-step-dot.active { background: var(--accent-gold); transform: scale(1.3); }
+.dialogue-step-dot.done { background: var(--accent-cyan); }
+
+.dialogue-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 2.5rem;
+  text-align: center;
+  transition: all 0.4s;
+}
+.dialogue-card-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.dialogue-card-layer {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 0.8rem;
+}
+.dialogue-card-layer.layer-curadoria { color: var(--accent-gold); }
+.dialogue-card-layer.layer-interrogador { color: var(--accent-cyan); }
+.dialogue-card-layer.layer-motor { color: var(--accent-violet); }
+
+.dialogue-card-question {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  font-weight: 400;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.dialogue-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.dialogue-answer {
+  padding: 0.8rem 1.2rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: 'Inter', sans-serif;
+  text-align: left;
+}
+.dialogue-answer:hover {
+  border-color: var(--accent-gold);
+  color: var(--text-primary);
+  background: rgba(201,168,76,0.05);
+}
+
+.dialogue-response {
+  text-align: left;
+  padding: 1.2rem;
+  background: var(--bg-tertiary);
+  border-left: 3px solid var(--accent-gold);
+  border-radius: 0 12px 12px 0;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  display: none;
+}
+.dialogue-response.visible { display: block; animation: fadeUp 0.4s; }
+
+.dialogue-nav {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+/* Zoom lens effect */
+.zoom-lens {
+  position: relative;
+  overflow: hidden;
+  cursor: none;
+  border-radius: 12px;
+}
+.zoom-lens .zoom-cursor {
+  position: absolute;
+  width: 120px; height: 120px;
+  border: 2px solid var(--accent-gold);
+  border-radius: 50%;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  box-shadow: 0 0 0 9999px rgba(10,10,12,0.7), inset 0 0 15px rgba(0,0,0,0.3);
+  display: none;
+  z-index: 10;
+}
+.zoom-lens:hover .zoom-cursor { display: block; }
+
+/* Flashlight effect */
+.flashlight {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.flashlight::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: radial-gradient(circle 80px at var(--mx, 50%) var(--my, 50%), transparent 0%, rgba(10,10,12,0.85) 100%);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top: 2px solid var(--accent-gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-gold);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  z-index: 400;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 350px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+.toast.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .reveal-modal-body { padding: 0 1.5rem 1.5rem; }
+  .reveal-modal-hero img { max-height: 200px; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg-canvas"></div>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+<div class="bg-orb bg-orb-3"></div>
+<div class="grain"></div>
+
+<!-- API Key Modal -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal">
+    <div class="modal-icon">🎨</div>
+    <h2>Bienvenido a ArtIA</h2>
+    <p>Para activar tu ojo sobre el arte, necesitas una API key de OpenRouter. Es gratuita y te permite analizar cualquier pintura.</p>
+    <div class="modal-input-group">
+      <input type="password" id="apiKeyInput" placeholder="sk-or-v1-..." spellcheck="false" />
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-primary" id="saveApiKey">Activar ArtIA <span>→</span></button>
+    </div>
+    <a href="https://openrouter.ai/settings/keys" target="_blank" class="modal-link">Obtener API key gratuita en openrouter.ai →</a>
+  </div>
+</div>
+
+<!-- Navigation -->
+<nav id="navbar">
+  <a href="#hero" class="nav-logo">Art<span>IA</span></a>
+  <ul class="nav-links">
+    <li><a href="#chat">Consultar</a></li>
+    <li><a href="#analizar">Analizar</a></li>
+    <li><a href="#invisible">Lo Invisible</a></li>
+    <li><a href="#como">Cómo Funciona</a></li>
+    <li><a href="#dialogo">Diálogo</a></li>
+    <li><a href="#metodologia">Metodología</a></li>
+  </ul>
+  <div class="nav-api-key">
+    <input type="password" id="navApiKey" placeholder="API Key..." spellcheck="false" />
+  </div>
+</nav>
+
+<!-- Hero -->
+<header class="hero" id="hero">
+  <div class="hero-badge">
+    <div class="dot"></div>
+    Inteligencia Artificial sobre el Arte
+  </div>
+  <h1>El ojo que ve<br>lo <em>invisible</em> <span class="accent-cyan">.</span></h1>
+  <p>ArtIA utiliza visión artificial de última generación para revelar los secretos ocultos en las pinturas: arrepentimentos del artista, capas ocultas, pigmentos alterados por el tiempo y detalles invisibles al ojo humano.</p>
+  <div class="hero-buttons">
+    <a href="#chat" class="btn btn-primary">🎨 Consultar sobre Arte</a>
+    <a href="#analizar" class="btn btn-secondary">🔬 Analizar Pintura</a>
+  </div>
+  <div class="scroll-indicator">
+    <span>Descubre más</span>
+    <div class="arrow"></div>
+  </div>
+</header>
+
+<!-- Chat Section -->
+<section class="chat-section" id="chat">
+  <div class="section-label">Diálogo Artístico</div>
+  <h2 class="section-title">Conversa con tu <em>Curador IA</em></h2>
+  <p class="section-desc">Pregunta sobre cualquier movimiento artístico, técnica, artista o cuadro. ArtIA tiene la mirada de un historiador del arte, la precisión de un científico y la sensibilidad de un curador.</p>
+
+  <div class="chat-container">
+    <div class="chat-header">
+      <div class="chat-avatar">🎭</div>
+      <div class="chat-title-text">
+        <h3>ArtIA — Curador de Visión Artificial</h3>
+        <div class="subtitle">Historiador · Analista · Intérprete</div>
+      </div>
+      <div class="chat-status">
+        <div class="status-dot"></div>
+        <span>En línea</span>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <!-- Welcome message -->
+      <div class="message bot">
+        <div class="message-avatar">🎭</div>
+        <div class="message-content">
+          Bienvenido a <strong>ArtIA</strong>, tu curador con visión artificial. 🎨<br><br>
+          Puedo hablarte sobre cualquier movimiento artístico, analizar técnicas pictóricas, revelar secretos ocultos en cuadros famosos... o incluso analizar una imagen de una pintura que subas.<br><br>
+          <em>¿Qué te gustaría explorar hoy?</em>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-wrapper">
+        <textarea class="chat-input" id="chatInput" placeholder="Pregunta sobre cualquier obra de arte, artista o técnica..." rows="1" oninput="autoResize(this)" onkeydown="handleChatKey(event)"></textarea>
+      </div>
+      <button class="chat-send-btn" id="chatSendBtn" onclick="sendMessage()">↑</button>
+    </div>
+
+    <div class="chat-suggestions">
+      <button class="suggestion-chip" onclick="quickAsk('¿Qué secretos ocultos tiene La Gioconda?')">😮 Secretos de La Gioconda</button>
+      <button class="suggestion-chip" onclick="quickAsk('¿Qué se encontró en Las Meninas con infrarrojos?')">🔭 Las Meninas bajo infrarrojos</button>
+      <button class="suggestion-chip" onclick="quickAsk('¿Qué es el sfumato y cómo se detecta?')">🎨 El sfumato explicado</button>
+      <button class="suggestion-chip" onclick="quickAsk('¿Qué arrepentimientos famosos han encontrado pintores?')">✍️ Arrepentimientos en pinturas</button>
+      <button class="suggestion-chip" onclick="quickAsk('¿Cómo ve el arte una inteligencia artificial?')">🤖 IA y arte</button>
+    </div>
+  </div>
+</section>
+
+<!-- Image Analysis Section -->
+<section class="image-analysis-section" id="analizar">
+  <div class="section-label">Análisis de Visión</div>
+  <h2 class="section-title">Sube una pintura y <em>descubre</em></h2>
+  <p class="section-desc">Sube una imagen de cualquier pintura y ArtIA la analizará con visión artificial: identificará estilo, técnica, paleta de colores, composición, posibles influencias, simbología y elementos que podrían no ser obvios a simple vista.</p>
+
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">🖼️</div>
+    <div class="upload-text">Arrastra una imagen o haz clic aquí</div>
+    <div class="upload-subtext">JPG, PNG, WebP — cualquier pintura, cualquier época</div>
+    <div class="uploaded-preview" id="previewContainer">
+      <img id="previewImage" src="" alt="Preview" />
+      <button class="remove-image-btn" id="removeImageBtn" onclick="event.stopPropagation(); removeImage()">✕</button>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)" />
+
+  <div class="analyze-btn-container">
+    <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeImage()" disabled>
+      🔬 Analizar Pintura
+    </button>
+  </div>
+
+  <div class="analysis-result" id="analysisResult">
+    <h4>🔍 Análisis de Visión Artificial</h4>
+    <div id="analysisContent"></div>
+  </div>
+</section>
+
+<!-- Invisible Reveals Section -->
+<section id="invisible">
+  <div class="section-label">Lo que el Ojo No Ve</div>
+  <h2 class="section-title">Secretos ocultos en la <em>historia del arte</em></h2>
+  <p class="section-desc">Cuando los científicos y restauradores analizan pinturas famosas con tecnología infrarroja, rayos X y microscopía, descubren un mundo completamente oculto. Aquí algunos de los hallazgos más fascinantes.</p>
+
+  <div class="reveals-grid">
+
+    <div class="reveal-card" onclick="openReveal('gioconda')" tabindex="0">
+      <div class="reveal-image-container">
+        <img class="reveal-image" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg" alt="La Gioconda" loading="lazy" />
+      </div>
+      <div class="reveal-info">
+        <div class="reveal-type ultravioleta">Ultravioleta + Infrarrojo</div>
+        <div class="reveal-title">La Gioconda</div>
+        <div class="reveal-painter">Leonardo da Vinci · c. 1503–1519</div>
+        <div class="reveal-desc">Análisis con luz ultravioleta revelaron que Leonardo aplicó hasta <strong>30 capas ultrafinas</strong> de sfumato, algunas de solo 2 micrones de grosor. Además se encontraron rastros de un esbozo inicial donde el personaje tenía <strong>cejas visibles</strong> y un dedo en una posición diferente.</div>
+      </div>
+    </div>
+
+    <div class="reveal-card" onclick="openReveal('meninas')" tabindex="0">
+      <div class="reveal-image-container">
+        <img class="reveal-image" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Las_Meninas_01.jpg/800px-Las_Meninas_01.jpg" alt="Las Meninas" loading="lazy" />
+      </div>
+      <div class="reveal-info">
+        <div class="reveal-type infrarrojo">Infrarrojo</div>
+        <div class="reveal-title">Las Meninas</div>
+        <div class="reveal-painter">Diego Velázquez · 1656</div>
+        <div class="reveal-desc">El análisis infrarrojo reveló que Velázquez se <strong>pintó a sí mismo en una posición diferente</strong> al principio — de espaldas al espectador. También se descubrió que la figura del rey Felipe IV y la reina Mariana estaba <strong>superpuesta</strong> originalmente, no reflejada en el espejo como aparece ahora.</div>
+      </div>
+    </div>
+
+    <div class="reveal-card" onclick="openReveal('joven')" tabindex="0">
+      <div class="reveal-image-container">
+        <img class="reveal-image" src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Rembrandt_-_A_Woman_Bathing_in_a_Stream_%281654%29_Google_Art_Project.jpg/800px-Rembrandt_-_A_Woman_Bathing_in_a_Stream_%281654%29_Google_Art_Project.jpg" alt="Mujer bañándose" loading="lazy" />
+      </div>
+      <div class="reveal-info">
+        <div class="reveal-type rayos-x">Rayos X</div>
+        <div class="reveal-title">Dibujos bajo la pintura</div>
+        <div class="reveal-painter">Varios maestros · Barroco</div>
+        <div class="reveal-desc">Los rayos X de pinturas barrocas frecuentemente revelan <strong>composiciones completamente abandonadas</strong> debajo. En cuadros de Rembrandt se han encontrado retratos enteros enterrados bajo paisajes, como si el artista reciclara sus lienzos cuando el dinero era escaso.</div>
+      </div>
+    </div>
+
+    <div class="reveal-card" onclick="openReveal('noches')" tabindex="0">
+      <div class="reveal-image-container">
+        <img class="reveal-image" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg" alt="La Noche Estrellada" loading="lazy" />
+      </div>
+      <div class="reveal-info">
+        <div class="reveal-type microscopio">Microscopía + Pigmentos</div>
+        <div class="reveal-title">La Noche Estrellada</div>
+        <div class="reveal-painter">Vincent van Gogh · 1889</div>
+        <div class="reveal-desc">Análisis microscópico reveló que Van Gogh usó <strong>al menos 5 pigmentos diferentes</strong> solo para crear los azules del cielo, incluyendo ultramarino sintético y azul de Prusia. Las zonas brillantes tienen capas de hasta <strong>1mm de grosor</strong> — un impresionismo casi escultórico invisible al ojo.</div>
+      </div>
+    </div>
+
+    <div class="reveal-card" onclick="openReveal('cristo')" tabindex="0">
+      <div class="reveal-image-container">
+        <img class="reveal-image" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Jan_van_Eyck_-_The_Arnolfini_Portrait_%28cropped%29.jpg/800px-Jan_van_Eyck_-_The_Arnolfini_Portrait_%28cropped%29.jpg" alt="El matrimonio Arnolfini" loading="lazy" />
+      </div>
+      <div class="reveal-info">
+        <div class="reveal-type infrarrojo">Infrarrojo + Microscopía</div>
+        <div class="reveal-title">El Matrimonio Arnolfini</div>
+        <div class="reveal-painter">Jan van Eyck · 1434</div>
+        <div class="reveal-desc">El análisis reveló la <strong>increíble precisión oculta</strong> de Van Eyck: debajo del espejo convexo se encontraron trazos que sugieren que cada ventana de la habitación fue pintada individualmente. Además, bajo la firma que dice "Jan van Eyck estuvo aquí" (originalmente aquí se pintó que estuvo aquí originalmente se encontraron dos palabras diferentes, como si dudara de su propia declaración).</div>
+      </div>
+    </div>
+
+    <div class="reveal-card" onclick="openReveal('criada')" tabindex="0">
+      <div class="reveal-image-container">
+        <img class="reveal-image" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Pablo_Picasso%2C_1910%2C_Girl_with_a_Mandolin_%28Fanny_Tellier%29%2C_oil_on_canvas%2C_100.3_x_73.6_cm%2C_Museum_of_Modern_Art_New_York..jpg/800px-Pablo_Picasso%2C_1910%2C_Girl_with_a_Mandolin_%28Fanny_Tellier%29%2C_oil_on_canvas%2C_100.3_x_73.6_cm%2C_Museum_of_Modern_Art_New_York..jpg" alt="Muchacha con mandolina" loading="lazy" />
+      </div>
+      <div class="reveal-info">
+        <div class="reveal-type rayos-x">Rayos X</div>
+        <div class="reveal-title">Debajo del Cubismo</div>
+        <div class="reveal-painter">Pablo Picasso · 1910</div>
+        <div class="reveal-desc">Los rayos X de las obras de Picasso frecuentemente muestran que debajo de las formas geométricas hay <strong>figuras completamente reconocibles</strong>, incluso paisajes y rostros que el artista deliberadamente "destruyó" para llegar a la abstracción. Es como ver el pensamiento visual en acción.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- How it Works -->
+<section id="como">
+  <div class="section-label">Metodología</div>
+  <h2 class="section-title">Cómo ve <em>ArtIA</em> el arte</h2>
+  <p class="section-desc">Nuestro sistema combina tres capas de análisis para comprender el arte de una forma que complementa — no reemplaza — la experiencia humana frente a una obra.</p>
+
+  <div class="how-steps">
+    <div class="step-card">
+      <div class="step-number">01</div>
+      <div class="step-icon">👁️</div>
+      <div class="step-title">Visión de Superficie</div>
+      <div class="step-desc">Análisis de composición, color, textura y estilo visible. Identificación de movimiento artístico, técnica y posibles influencias.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-number">02</div>
+      <div class="step-icon">🔬</div>
+      <div class="step-title">Visión Oculta</div>
+      <div class="step-desc">Detección de elementos que el ojo humano puede pasar por alto: proporciones matemáticas, repeticiones, simetrías ocultas, y patrones en la pincelada.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-number">03</div>
+      <div class="step-icon">🧠</div>
+      <div class="step-title">Interpretación</div>
+      <div class="step-desc">Contextualización histórica, análisis de simbología, y conexión con el mensaje y la intención del artista.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-number">04</div>
+      <div class="step-icon">💬</div>
+      <div class="step-title">Diálogo</div>
+      <div class="step-desc">Conversación natural que adapta la profundidad del análisis a lo que necesitas: desde datos técnicos hasta reflexiones filosóficas.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Methodology Deep Dive -->
+<section id="metodologia">
+  <div class="section-label">Marco Teórico</div>
+  <h2 class="section-title">Capas de la <em>percepción</em></h2>
+  <p class="section-desc">ArtIA se inspira en las metodologías de apreciación artística contemporáneas para estructurar su mirada.</p>
+
+  <div class="methodology">
+    <div class="methodology-grid">
+      <div class="method-layer">
+        <div class="method-layer-name layer-curadoria">Capa de Curaduría</div>
+        <p>Selecciona, presenta y contextualiza. Como un curador de museo, ArtIA elige qué mirar, qué destacar y cómo conectar una obra con su momento histórico y cultural.</p>
+        <div class="method-tags">
+          <span class="method-tag">VTS</span>
+          <span class="method-tag">Visual Thinking</span>
+          <span class="method-tag">Estrategias visuales</span>
+        </div>
+      </div>
+      <div class="method-layer">
+        <div class="method-layer-name layer-interrogador">Capa de Interrogación</div>
+        <p>No acepta la superficie. Como un detective del arte, cuestiona: ¿por qué esta composición? ¿qué hay debajo? ¿qué cambiaría si...?</p>
+        <div class="method-tags">
+          <span class="method-tag">DBAE</span>
+          <span class="method-tag">Education</span>
+          <span class="method-tag">Disciplinas</span>
+        </div>
+      </div>
+      <div class="method-layer">
+        <div class="method-layer-name layer-motor">Capa del Motor</div>
+        <p>La visión artificial como motor de descubrimiento. Procesa patrones, detecta anomalías y revela conexiones que escapan a la percepción humana.</p>
+        <div class="method-tags">
+          <span class="method-tag">ABP</span>
+          <span class="method-tag">Aprendizaje</span>
+          <span class="method-tag">Basado en problemas</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Visual Dialogue Section -->
+<section id="dialogo">
+  <div class="section-label">Diálogo Visual</div>
+  <h2 class="section-title">Explora con <em>mirada VTS</em></h2>
+  <p class="section-desc">Un ejercicio de apreciación artística guiado por las tres capas de ArtIA: Curaduría (observar), Interrogación (cuestionar), Motor (descubrir). Responde a cada pregunta y revela una nueva dimensión de la obra.</p>
+
+  <div class="dialogue-container">
+    <div class="dialogue-progress" id="dialogueProgress">
+      <div class="dialogue-step-dot active" data-step="0"></div>
+      <div class="dialogue-step-dot" data-step="1"></div>
+      <div class="dialogue-step-dot" data-step="2"></div>
+      <div class="dialogue-step-dot" data-step="3"></div>
+      <div class="dialogue-step-dot" data-step="4"></div>
+    </div>
+
+    <div class="dialogue-card" id="dialogueCard">
+      <div class="dialogue-card-icon" id="dialogueIcon">👁️</div>
+      <div class="dialogue-card-layer layer-curadoria" id="dialogueLayer">Capa de Curaduría · VTS</div>
+      <div class="dialogue-card-question" id="dialogueQuestion">Observa la imagen de La Gioconda. Sin pensar en lo que "sabes" sobre ella, simplemente mirémosla como si fuera la primera vez. ¿Qué es lo primero que notas? ¿Hacia dónde va tu mirada?</div>
+      <div class="dialogue-answers" id="dialogueAnswers">
+        <button class="dialogue-answer" onclick="dialogueAnswer(0)">Mi mirada va directo a los ojos, luego a la boca</button>
+        <button class="dialogue-answer" onclick="dialogueAnswer(1)">Me fondo en el paisaje de fondo detrás de ella</button>
+        <button class="dialogue-answer" onclick="dialogueAnswer(2)">Me detengo en las manos, son increíblemente detalladas</button>
+        <button class="dialogue-answer" onclick="dialogueAnswer(3)">Me cuesta trabajo definirla — algo sobre ella me inquieta</button>
+      </div>
+      <div class="dialogue-response" id="dialogueResponse"></div>
+    </div>
+
+    <div class="dialogue-nav" id="dialogueNav" style="display:none;">
+      <button class="btn btn-secondary" onclick="dialoguePrev()">← Anterior</button>
+      <button class="btn btn-primary" onclick="dialogueNext()">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- Zoom exploration area -->
+  <div style="margin-top: 3rem; text-align: center;">
+    <p class="section-desc" style="text-align:center; margin-bottom:1rem;">🔍 Pasa el cursor sobre la imagen para explorarla con lupa</p>
+    <div class="zoom-lens" id="zoomLens" style="max-width:500px; margin:0 auto;">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg" alt="La Gioconda" style="width:100%; display:block; border-radius:12px;" id="zoomImage" />
+      <div class="zoom-cursor" id="zoomCursor"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-logo">Art<span style="color:var(--accent-cyan)">IA</span></div>
+  <p>El ojo que ve lo invisible · Hecho con inteligencia artificial y amor por el arte</p>
+  <p style="margin-top:0.5rem">2024 — Explorando la intersección entre arte y tecnología</p>
+</footer>
+
+<script>
+// ===== API KEY MANAGEMENT =====
+const STORAGE_KEY = 'artia_openrouter_key';
+
+function getApiKey() {
+  return localStorage.getItem(STORAGE_KEY) || '';
+}
+
+function setApiKey(key) {
+  localStorage.setItem(STORAGE_KEY, key);
+}
+
+function hasApiKey() {
+  const key = getApiKey();
+  return key && key.length > 10;
+}
+
+function initApiKeyModal() {
+  const saved = getApiKey();
+  if (saved) {
+    document.getElementById('navApiKey').value = saved;
+    return;
+  }
+  // Show modal after a short delay
+  setTimeout(() => {
+    const modal = document.getElementById('apiModal');
+    if (modal) modal.classList.add('active');
+  }, 1500);
+}
+
+document.getElementById('saveApiKey').addEventListener('click', () => {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (key && key.length > 10) {
+    setApiKey(key);
+    document.getElementById('navApiKey').value = key;
+    document.getElementById('apiModal').classList.remove('active');
+  } else {
+    const input = document.getElementById('apiKeyInput');
+    input.style.borderColor = '#e0568a';
+    input.placeholder = 'Key inválida...';
+    setTimeout(() => { input.style.borderColor = ''; input.placeholder = 'sk-or-v1-...'; }, 2000);
+  }
+});
+
+document.getElementById('navApiKey').addEventListener('change', (e) => {
+  const key = e.target.value.trim();
+  if (key && key.length > 10) setApiKey(key);
+});
+
+// ===== NAVBAR SCROLL =====
+window.addEventListener('scroll', () => {
+  const nav = document.getElementById('navbar');
+  if (window.scrollY > 60) nav.classList.add('scrolled');
+  else nav.classList.remove('scrolled');
+});
+
+// ===== CHAT =====
+const SYSTEM_PROMPT = `Eres ArtIA, un curador de arte con visión artificial que puede ver lo invisible en las pinturas. Tu conocimiento abarca:
+- Historia del arte desde el Renacimiento hasta el arte contemporáneo
+- Técnicas pictóricas: sfumato, impresionismo, claroscuro, etc.
+- Análisis científico de pinturas: infrarrojos, rayos X, microscopía, ultravioleta
+- Simbología, iconografía y contexto histórico de las obras
+- Descubrimientos ocultos en cuadros famosos (arrepentimientos, capas ocultas, pigmentos alterados)
+
+Responde de forma conversacional, apasionada y educativa. Usa datos concretos, nombres de artistas, fechas y detalles técnicos cuando sea relevante. Cuando hables de descubrimientos ocultos en pinturas, sé específico sobre qué tecnología se usó y qué se encontró. Responde en español.`;
+
+let chatHistory = [
+  { role: 'system', content: SYSTEM_PROMPT }
+];
+
+let isTyping = false;
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+}
+
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function quickAsk(text) {
+  document.getElementById('chatInput').value = text;
+  sendMessage();
+}
+
+function addMessage(role, content) {
+  const messagesEl = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  avatar.textContent = role === 'bot' ? '🎭' : '👤';
+  const contentEl = document.createElement('div');
+  contentEl.className = 'message-content';
+  // Parse simple markdown
+  contentEl.innerHTML = content
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+  div.appendChild(avatar);
+  div.appendChild(contentEl);
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return content;
+}
+
+function showTyping() {
+  const messagesEl = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'message bot typing-msg';
+  div.id = 'typingIndicator';
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  avatar.textContent = '🎭';
+  const dots = document.createElement('div');
+  dots.className = 'typing-indicator';
+  dots.innerHTML = '<span></span><span></span><span></span>';
+  div.appendChild(avatar);
+  div.appendChild(dots);
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function hideTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || isTyping) return;
+
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    document.getElementById('apiModal').classList.add('active');
+    return;
+  }
+
+  // Add user message
+  addMessage('user', text);
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Add to history
+  chatHistory.push({ role: 'user', content: text });
+  isTyping = true;
+  document.getElementById('chatSendBtn').disabled = true;
+  showTyping();
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://artia.app',
+        'X-Title': 'ArtIA'
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-001',
+        messages: chatHistory,
+        temperature: 0.8,
+        max_tokens: 1024
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const reply = data.choices[0].message.content;
+
+    hideTyping();
+    addMessage('bot', reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+
+  } catch (err) {
+    hideTyping();
+    addMessage('bot', 'Lo siento, hubo un error de conexión. Verifica tu API key e intenta de nuevo. 🎨');
+    console.error(err);
+  }
+
+  isTyping = false;
+  document.getElementById('chatSendBtn').disabled = false;
+}
+
+// ===== IMAGE UPLOAD =====
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const previewContainer = document.getElementById('previewContainer');
+const previewImage = document.getElementById('previewImage');
+const analyzeBtn = document.getElementById('analyzeBtn');
+let uploadedFile = null;
+
+uploadZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadZone.classList.add('dragover');
+});
+
+uploadZone.addEventListener('dragleave', () => {
+  uploadZone.classList.remove('dragover');
+});
+
+uploadZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) {
+    handleFile(e.dataTransfer.files[0]);
+  }
+});
+
+function handleFileSelect(e) {
+  if (e.target.files.length) {
+    handleFile(e.target.files[0]);
+  }
+}
+
+function handleFile(file) {
+  if (!file.type.startsWith('image/')) return;
+  uploadedFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    previewImage.src = e.target.result;
+    uploadZone.classList.add('has-image');
+    analyzeBtn.disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImage() {
+  uploadedFile = null;
+  previewImage.src = '';
+  uploadZone.classList.remove('has-image');
+  analyzeBtn.disabled = true;
+  document.getElementById('analysisResult').classList.remove('visible');
+  fileInput.value = '';
+}
+
+async function analyzeImage() {
+  if (!uploadedFile) return;
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    document.getElementById('apiModal').classList.add('active');
+    return;
+  }
+
+  // Change button state
+  analyzeBtn.innerHTML = '🔬 Analizando...';
+  analyzeBtn.disabled = true;
+
+  const messagesEl = document.getElementById('chatMessages');
+
+  // Switch to chat tab for result — or show inline
+  const resultEl = document.getElementById('analysisResult');
+  const contentEl = document.getElementById('analysisContent');
+  contentEl.innerHTML = '<div class="message bot" style="max-width:100%"><div class="message-avatar">🎭</div><div class="typing-indicator" style="padding:1rem"><span></span><span></span><span></span></div></div>';
+  resultEl.classList.add('visible');
+  resultEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  // Convert to base64
+  const base64 = await new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const b64 = reader.result.split(',')[1];
+      resolve(b64);
+    };
+    reader.readAsDataURL(uploadedFile);
+  });
+
+  const messages = [
+    {
+      role: 'system',
+      content: SYSTEM_PROMPT
+    },
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: 'Analiza esta pintura en profundidad. Describe: 1) Estilo artístico y posible movimiento, 2) Técnica visible (pincelada, textura, uso del color), 3) Composición y uso del espacio, 4) Posibles elementos que serían invisibles sin tecnología (arrepentimientos, capas ocultas, pigmentos alterados), 5) Simbología o mensajes ocultos, 6) Contexto histórico probable. Sé detallado y apasionado en tu análisis.'
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: `data:${uploadedFile.type};base64,${base64}`
+          }
+        }
+      ]
+    }
+  ];
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://artia.app',
+        'X-Title': 'ArtIA'
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-001',
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 1500
+      })
+    });
+
+    if (!response.ok) throw new Error(`Error ${response.status}`);
+
+    const data = await response.json();
+    const analysis = data.choices[0]?.message?.content || 'No se pudo analizar la imagen.';
+
+    // Format as findings
+    const sections = analysis.split(/\n\n+/);
+    let html = '<div style="text-align:center;color:var(--text-muted);font-size:0.8rem;margin-bottom:1rem;margin-top:0.5rem;">📷 Análisis basado en visión IA — complementa, no reemplaza, la experiencia de contemplar la obra en persona</div>';
+    sections.forEach(section => {
+      if (section.trim()) {
+        // Bold the first line if it looks like a heading
+        let formatted = section.trim().replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        if (/^\d\)/.test(formatted) || /^[A-ZÁÉÍÓÚ]/.test(formatted.split('\n')[0])) {
+          const parts = formatted.split('\n');
+          html += `<div class="finding"><strong>${parts[0]}</strong><br>${parts.slice(1).join('<br>')}</div>`;
+        } else {
+          html += `<div class="finding">${formatted.replace(/\n/g, '<br>')}</div>`;
+        }
+      }
+    });
+    contentEl.innerHTML = html;
+
+    // Also add to chat
+    addMessage('user', '[Imagen subida: análisis de pintura]');
+    addMessage('bot', `📊 **Análisis de tu pintura:**\n\n${analysis.substring(0, 600)}...\n\nResultado completo mostrado arriba.`);
+
+  } catch (err) {
+    contentEl.innerHTML = '<div class="finding" style="border-left-color:var(--accent-rose)">Error en el análisis. Verifica tu API key y conexión, e intenta de nuevo.</div>';
+    console.error(err);
+  }
+
+  analyzeBtn.innerHTML = '🔬 Analizar Pintura';
+  analyzeBtn.disabled = false;
+}
+
+// ===== REVEAL CARDS =====
+function openReveal(id) {
+  const reveals = {
+    gioconda: {
+      title: 'La Gioconda — Secretos Descubiertos',
+      content: `**Lo que la tecnología reveló:**\n\n• **30+ capas de sfumato**, la más fina de solo 2 micrones (la millonésima parte de un metro). Esto es lo que da la expresión enigmática de la boca.\n\n• **Sin cejas ni pestañas en el original** — la restauración posterior las "inventó" o fueron limpiadas accidentalmente.\n\n• **Posible dibujo inicial (pentimento)** donde la posición de los dedos de la mano izquierda era diferente.\n\n• **Fondo alterado**: originalmente tenía columnas a los lados que fueron recortadas, cambiando toda la composición de profundidad.\n\n• **Luminosidad variable**: bajo ultravioleta se ven las zonas donde Leonardo aplicó laca de manera diferente, sugiriórturas sesiones de trabajo a lo largo de 16 años.`
+    },
+    meninas: {
+      title: 'Las Meninas — Lo que Velázquez Ocultó',
+      content: `**Descubrimientos con luz infrarroja:**\n\n• **Velázquez se pintó a sí mismo originalmente de frente**, mirando directamente al espectador, no de espaldas al caballete. Decidió cambiarlo para crear una composición más dinámica.\n\n• **La posición del rey Felipe IV y la rena Mariana en el espejo** no coincidía exactamente con el planfleto inicial.\n\n• **La composición geométrica** tiene un centro óptico exacto que Velázquez calculó con compás — una precisión de ingeniero, no solo de pintor.\n\n• **La luz**: estudios con espectrografía revelaron que el rayo de luz de la ventana derecha fue ajustado múltiples veces en posición.`
+    },
+    joven: {
+      title: 'Pinturas Barrocas — Enterradas en Rayos X',
+      content: `**Lo que los rayos X frecuentemente revelan:**\n\n• Composiciones **completamente abandonadas** debajo de la pintura visible. Retratos enteros debajo de paisajes.\n\n• **Pruebas de pobreza**: artistas como Rembrandt reciclaban lienzos cuando no podían comprar nuevos.\n\n• **Anatomía superpuesta**: la estructura ósea y muscular revelada por rayos X muestra cómo los pintores del siglo XVII entendían la anatomía.\n\n• **Cambios de identidad**: un retrato anónimo en la pintura final a menudo era un personaje importante en la versión invisible debajo.`
+    },
+    noches: {
+      title: 'La Noche Estrellada — Secretos Químicos',
+      content: `**Análisis de pigmentos y capas:**\n\n• **5+ pigmentos solo para los azules**: ultramarino sintético, azul de Prusia, cobalto, y dos más que se degradaron.\n\n• **Espesor de hasta 1mm** en las zonas de estrellas brillantes — haciendo que la "pintura" aquí sea casi una escultura.\n\n• **El ciprés** en primer plano tiene una composición química diferente al resto del cuadro, sugiriendo que fue pintado en un momento distinto o con pinturas de un proveedor diferente.\n\n• **Grietas reveladoras**: el patrón de craquelé cuenta la historia del secado desigual por el grosor de las capas.`
+    },
+    cristo: {
+      title: 'El Matrimonio Arnolfini — Precisión Invisible',
+      content: `**Detalles que Van Eyck escondió a propósito:**\n\n• **Cada ventana** en el espejo convexo fue pintada individualmente — el reflejo muestra lo que habría en la habitación.\n\n• **La firma** "Jan van Eyck estuvo aquí" reemplazó otra inscpción que decía "Jan van Eyck estuvo aquí" — una frase diferente fue pintada encima, como si dudara de su propio testimonio.\n\n• **Manos perfectas**: bajo microscopía, la posición exacta de los dedos sigue proporciones matemáticas de la época (la proporción del codo).\n\n• **El perro** fue añadido en una fase posterior (visible con infrarrojo).`
+    },
+    criada: {
+      title: 'Picasso — Debajo del Cubismo',
+      content: `**Lo que los rayos X de las obras de Picasso revelan:**\n\n• **Figuras reconocibles** debajo de toda composición cubista — personas, animales, objetos.\n\n• **Proceso creativo en reversión**: ver como una forma reconocible se "destruye" geométricamente paso a paso.\n\n• El cuadro "Muchacha con mandolina" tiene debajo una composición que podría ser un **paisaje marino abstracto**, completamente diferente.\n\n• **Picasso literalmente "no quería" que vieras lo anterior** — la pintura cubista funciona como un borrador de quien pintó encima.`
+    }
+  };
+
+  const reveal = reveals[id];
+  if (reveal && reveal.content) {
+    openRevealModal(id);
+  }
+}
+
+// ===== REVEAL MODAL =====
+const revealModalData = {
+  gioconda: {
+    img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg',
+    type: 'ultravioleta',
+    typeLabel: 'Ultravioleta + Infrarrojo',
+    title: 'La Gioconda — Secretos Descubiertos',
+    painter: 'Leonardo da Vinci · c. 1503–1519',
+    findings: [
+      { icon: '🔆', iconClass: 'finding-icon-uv', title: '30+ capas de sfumato', desc: 'La más fina de solo 2 micrones (la millonésima parte de un metro). Esto es lo que crea la expresión enigmática de la boca — ningún contorno definido, solo transiciones imperceptibles.' },
+      { icon: '👁️', iconClass: 'finding-icon-ir', title: 'Sin cejas ni pestañas', desc: 'El análisis UV revela que originalmente no tenía cejas visibles. Las que vemos hoy fueron añadidas en restauraciones posteriores o limpiezas agresivas.' },
+      { icon: '✋', iconClass: 'finding-icon-mic', title: 'Pentimento en las manos', desc: 'Bajo infrarrojo se detecta que la posición de los dedos de la mano izquierda fue cambiada. Leonardo reposicionó las manos durante la pintura.' },
+      { icon: '🏔️', iconClass: 'finding-icon-xr', title: 'Fondo alterado', desc: 'Originalmente tenía columnas visibles a ambos lados. Fueron recortadas en una restauración, cambiando completamente la composición de profundidad que Leonardo diseñó.' },
+      { icon: '⏳', iconClass: 'finding-icon-che', title: '16 años de trabajo', desc: 'Las zonas donde Leonardo aplicó laca de manera diferente sugieren múltiples sesiones a lo largo de 16 años. Llevó la consigo a Francia y siguió retocándola.' }
+    ]
+  },
+  meninas: {
+    img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Las_Meninas_01.jpg/800px-Las_Meninas_01.jpg',
+    type: 'infrarrojo',
+    typeLabel: 'Infrarrojo + IRR',
+    title: 'Las Meninas — Lo que Velázquez Ocultó',
+    painter: 'Diego Velázquez · 1656',
+    findings: [
+      { icon: '🧑‍🎨', iconClass: 'finding-icon-ir', title: 'Velázquez se reposicionó', desc: 'Se pintó a sí mismo originalmente de frente, mirando al espectador directamente. Decidió girarse al caballete para crear una composición más dinámica y enigmática.' },
+      { icon: '👑', iconClass: 'finding-icon-xr', title: 'Los reyes en el espejo', desc: 'La posición reflejada de Felipe IV y Mariana no coincidía exactamente con el plano original. Velázquez ajustó la perspectiva del espejo en una segunda fase.' },
+      { icon: '📐', iconClass: 'finding-icon-mic', title: 'Geometría de ingeniero', desc: 'El centro óptico compositivo fue calculado con precisión matemática. Cada personaje ocupa un lugar exacto en la cuadrícula espacial.' },
+      { icon: '💡', iconClass: 'finding-icon-che', title: 'La luz fue reajustada', desc: 'El rayo de luz de la ventana derecha fue modificado en múltiples posiciones, como si Velázquez buscara iluminar exactamente quién quisiera.' }
+    ]
+  },
+  joven: {
+    img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Rembrandt_-_A_Woman_Bathing_in_a_Stream_%281654%29_Google_Art_Project.jpg/800px-Rembrandt_-_A_Woman_Bathing_in_a_Stream_%281654%29_Google_Art_Project.jpg',
+    type: 'rayos-x',
+    typeLabel: 'Rayos X + Reflectografía',
+    title: 'Pinturas Barrocas — Composiciones Enterradas',
+    painter: 'Rembrandt y otros · Siglo XVII',
+    findings: [
+      { icon: '💀', iconClass: 'finding-icon-xr', title: 'Retratos bajo paisajes', desc: 'Rayos X muestran que debajo de muchos paisajes hay retratos completos. Artistas reciclaban lienzos cuando el dinero era escaso.' },
+      { icon: '🦴', iconClass: 'finding-icon-mic', title: 'Anatomía revelada', desc: 'La estructura ósea y muscular visible por rayos X muestra cómo los pintores barcos entendían profundamente la anatomía humana.' },
+      { icon: '🎭', iconClass: 'finding-icon-ir', title: 'Cambios de identidad', desc: 'Un retrato anónimo visible a menudo era un personaje importante en la versión invisible debajo. El artista literalmente borró a una persona.' },
+      { icon: '💰', iconClass: 'finding-icon-che', title: 'Pruebas de pobreza', desc: 'Rembrandt fue declarado en bancarrota. Los múltiples pentimenti muestran cómo reutilizaba lienzos constantemente.' }
+    ]
+  },
+  noches: {
+    img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg',
+    type: 'microscopio',
+    typeLabel: 'Microscopía + Química de Pigmentos',
+    title: 'La Noche Estrellada — Secretos Químicos',
+    painter: 'Vincent van Gogh · 1889',
+    findings: [
+      { icon: '🔵', iconClass: 'finding-icon-che', title: '5+ pigmentos solo para el azul', desc: 'Ultramarino sintético, azul de Prusia, cobalto y dos más degradados por el tiempo. Van Gogh mezclaba compulsivamente para lograr exactamente el tono que buscaba.' },
+      { icon: '🏔️', iconClass: 'finding-icon-mic', title: 'Pintura casi escultórica', desc: 'Las estrellas brillantes tienen capas de hasta 1mm de grosor — impresionismo tridimensional en estado puro.' },
+      { icon: '🌲', iconClass: 'finding-icon-ir', title: 'El ciprés fue añadido después', desc: 'Composición química diferente sugiere que fue pintado en una sesión separada, con materiales de un proveedor distinto.' },
+      { icon: '⚡', iconClass: 'finding-icon-uv', title: 'Craquelé revelador', desc: 'El patrón de grietas cuenta la historia del secado desigual por grosor de capas — un mapa del entusiasmo del artista.' }
+    ]
+  },
+  cristo: {
+    img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Jan_van_Eyck_-_The_Arnolfini_Portrait_%28cropped%29.jpg/800px-Jan_van_Eyck_-_The_Arnolfini_Portrait_%28cropped%29.jpg',
+    type: 'infrarrojo',
+    typeLabel: 'Infrarrojo + Microscopía',
+    title: 'El Matrimonio Arnolfini — Precisión Invisible',
+    painter: 'Jan van Eyck · 1434',
+    findings: [
+      { icon: '🪞', iconClass: 'finding-icon-ir', title: 'El espejo muestra lo real', desc: 'Cada ventana en el reflejo del espejo convexo fue pintada individualmente — Van Eyck pintó la habitación que el espectador no puede ver.' },
+      { icon: '✍️', iconClass: 'finding-icon-mic', title: 'La firma fue cambiada', desc: 'Bajo la inscripción "Jan van Eyck estuvo aquí" hay otra frase anterior. Van Eyck dudó de su propio testimonio y lo reescribió.' },
+      { icon: '🐕', iconClass: 'finding-icon-uv', title: 'El perro es posterior', desc: 'El perro fue añadido en una fase de trabajo posterior, visible bajo infrarrojo como un elementexterno al plano original.' },
+      { icon: '✋', iconClass: 'finding-icon-che', title: 'Proporciones perfectas', desc: 'Bajo microscopía, la posición de los dedos sigue proporciones matemáticas exactas — una obsesión por la geometría sagrada.' }
+    ]
+  },
+  criada: {
+    img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Pablo_Picasso%2C_1910%2C_Girl_with_a_Mandolin_%28Fanny_Tellier%29%2C_oil_on_canvas%2C_100.3_x_73.6_cm%2C_Museum_of_Modern_Art_New_York..jpg/800px-Pablo_Picasso%2C_1910%2C_Girl_with_a_Mandolin_%28Fanny_Tellier%29%2C_oil_on_canvas%2C_100.3_x_73.6_cm%2C_Museum_of_Modern_Art_New_York..jpg',
+    type: 'rayos-x',
+    typeLabel: 'Rayos X + Análisis Digital',
+    title: 'Picasso — Debajo del Cubismo',
+    painter: 'Pablo Picasso · 1910',
+    findings: [
+      { icon: '👩', iconClass: 'finding-icon-xr', title: 'Reconocibles debajo de la geometría', desc: 'Figuras completas, animales y objetos sepultados bajo cada composición cubista. Es como ver al pensamiento visual destruirse a sí mismo.' },
+      { icon: '🌊', iconClass: 'finding-icon-ir', title: 'Muchacha con mandolina', desc: 'Debajo hay un paisaje marino abstracto completamente diferente — Picasso casi no conservó nada de la capa anterior.' },
+      { icon: '🧠', iconClass: 'finding-icon-mic', title: 'Proceso creativo en reversión', desc: 'Ver cómo una forma reconocible se fragmenta geométricamente paso a paso es como leer el cerebro de Picasso en tiempo real.' },
+      { icon: '🗑️', iconClass: 'finding-icon-che', title: 'Un "no mires" deliberado', desc: 'Picasso no quería que vieras lo anterior. El cubismo funciona como un acto de borrado consciente, no como una primera idea incompleta.' }
+    ]
+  }
+};
+
+function openRevealModal(id) {
+  const data = revealModalData[id];
+  if (!data) return;
+
+  document.getElementById('revealModalImg').src = data.img;
+  const typeEl = document.getElementById('revealModalType');
+  typeEl.textContent = data.typeLabel;
+  typeEl.className = 'reveal-modal-type type-' + data.type;
+  document.getElementById('revealModalTitle').textContent = data.title;
+  document.getElementById('revealModalPainter').textContent = data.painter;
+
+  const findingsEl = document.getElementById('revealModalFindings');
+  findingsEl.innerHTML = '';
+  data.findings.forEach(f => {
+    findingsEl.innerHTML += '<div class="reveal-finding-item">' +
+      '<div class="reveal-finding-icon ' + f.iconClass + '">' + f.icon + '</div>' +
+      '<div class="reveal-finding-text"><h5>' + f.title + '</h5><p>' + f.desc + '</p></div>' +
+      '</div>';
+  });
+
+  document.getElementById('revealModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRevealModal() {
+  document.getElementById('revealModal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('revealModal').addEventListener('click', (e) => {
+  if (e.target.id === 'revealModal') closeRevealModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeRevealModal();
+});
+
+// ===== VISUAL DIALOGUE =====
+const dialogueSteps = [
+  {
+    icon: '👁️',
+    layer: 'layer-curadoria',
+    layerLabel: 'Capa de Curaduría · VTS',
+    question: 'Observa la imagen de La Gioconda. Sin pensar en lo que "sabes" sobre ella, simplemente mirémosla como si fuera la primera vez. ¿Qué es lo primero que notas? ¿Hacia dónde va tu mirada?',
+    answers: [
+      'Mi mirada va directo a los ojos, luego a la boca',
+      'Me fondo en el paisaje de fondo detrás de ella',
+      'Me detengo en las manos, son increíblemente detalladas',
+      'Me cuesta trabajo definirla — algo sobre ella me inquieta'
+    ],
+    responses: [
+      'Excelente — lo más común es este recorrido ocular: ojos → boca. Leonardo diseñó la composición para guiar exactamente esa mirada. La "sonrisa enigmática" funciona porque el sfumato en la boca fue construido con capas ultrafinas que se leen de forma diferente dependiendo del ángulo de visión y la distancia. Tus ojos bordean constantemente de "sonriente" a "seria".',
+      'El paisaje es fascinante. Leonardo fue un científico meticuloso, y el fondo muestra formaciones geológicas reales que estudió directamente. Pero nota algo: el horizonte a la izquierda está más alto que a la derecha. Esto crea una sutil inquietud — tu cerebro percibe que algo es "diferente" y no puede definir qué.',
+      'Las manos están cruzadas en una postura que en el Renacimiento indicaba compostura y serenidad. Leonardo las pintó con una suavidad que contrasta con la complejidad del rostro. Bajo infrarrojo se ve que la posición de los dedos cambió: originalmente estaban más tensas.',
+      'Esa inquietud es exactamente lo que Leonardo quiso crear. Usó el sfumato para que ninguna línea tenga un borde definido — tu cerebro nunca puede "enfocar" la expresión completamente. Es una pintura que cambia dependiendo de tu estado emocional del momento. Genio puro.'
+    ]
+  },
+  {
+    icon: '🔍',
+    layer: 'layer-interrogador',
+    layerLabel: 'Capa de Interrogación · DBAE',
+    question: 'Si pudieras preguntarle a Leonardo UNA cosa sobre cómo la pintó, ¿qué le preguntarías?',
+    answers: [
+      '¿Por qué la sonrisa es tan ambigua?',
+      '¿Por qué el fondo es asimétrico?',
+      '¿Cuánto tiempo tardaste realmente?',
+      '¿Es realmente un retrato o algo más?'
+    ],
+    responses: [
+      'La ambigüedad de la sonrisa es CONSTRUIDA, no accidental. Leonardo estudió anatomía facial obsesivamente. Sabía exactamente qué músculos producían qué expresiones y los mezcló deliberadamente en proporciones que ninguna emoción pura domina. Es una pintura sobre la complejidad de la emoción humana, no sobre una emoción específica.',
+      'La asimetría es deliberada. El horizonte izquierdo más alto que el derecho crea una sutil tensión compositiva — como un acorde musical que no resuelve. Leonardo usaba la geometría como herramienta emocional, no solo estética.',
+      'Al menos 16 años. Leonardo era famoso por su lentitud. La llevó consigo a Francia cuando se mudó, y siguió retocándola hasta poco antes de morir. Algunas capas de pigmento fueron aplicadas cuando Leonardo tenía más de 60 años sobre un cuadro que empezó a los 30.',
+      'Esa es la pregunta correcta. Muchos estudiosos creen que la Gioconda no es un retrato de Lisa Gherardini (aunque probablemente la modelo sea ella), sino una exploración filosófica de la naturaleza de la belleza, la emoción y la percepción. Leonardo la llamaba "pintura mental" — algo que existe más en la mente que en la realidad.'
+    ]
+  },
+  {
+    icon: '🔬',
+    layer: 'layer-motor',
+    layerLabel: 'Capa del Motor · ABP (Visión IA)',
+    question: 'Imagina que nuestra IA pudiera analizar cada pincelada de la Gioconda con precisión molecular. ¿Qué crees que encontraría que ni los mejores expertos han logrado ver?',
+    answers: [
+      'La secuencia exacta de capas — cómo construyó la profundidad',
+      'Ingredientes secretos en sus pigmentos',
+      'Micro-firmas o marcas ocultas intencionales',
+      'La verdad sobre si cambió de modelo a mitad del proceso'
+    ],
+    responses: [
+      'Bajo análisis microscópico, las capas revelan una secuencia increíblemente deliberada: tierra y ocre primero, luego veladuras translúcidas de pigmento en aceite, luego barnices coloreados. Leonardo pintaba "hacia adelante" — de lo oscuro a lo claro — y cada capa modificaba la que estaba debajo. Es como una sinfonía de luz.',
+      'Leonardo era un alquimista además de artista. Análisis químicos han detectado trazas de óxido de plomo mezclado en sus barnices (secaba más rápido), y pigmentos molidos a tamaños específicos de partícula que cambiaban su color dependiendo del ángulo de la luz. Era más ingeniero que pintor.',
+      'Algunos investigadores creen que Leonardo firmó la pintura con un micro-inscripción casi invisible en las pupilas de los otros retratos que supuestamente pintó. Si existiera algo así en la Gioconda, estaría en la capa de barniz final — y solo análisis multiespectral lo revelaría.',
+      'Esta es la gran pregunta. Análisis comparativo con otros retratos de Leonardo muestra que ciertas proporciones faciales son ligeramente diferentes en distintas zonas del cuadro. ¿Un solo modelo envejeciendo durante 16 años? ¿Dos modelos diferentes? La IA de visión podría mapear la geometría facial completa y determinar si es una o dos personas.'
+    ]
+  }
+];
+
+let currentDialogueStep = 0;
+let answeredCurrentStep = false;
+
+function selectDialogueAnswer(idx) {
+  answeredCurrentStep = true;
+  const step = dialogueSteps[currentDialogueStep];
+  const responseEl = document.getElementById('dialogueResponse');
+  responseEl.innerHTML = step.responses[idx].replace(/\n/g, '<br>');
+  responseEl.classList.add('visible');
+  document.getElementById('dialogueNav').style.display = 'flex';
+  // Disable all answer buttons
+  document.querySelectorAll('.dialogue-answer').forEach(btn => btn.disabled = true);
+}
+
+function dialogueAnswer(idx) {
+  if (answeredCurrentStep) return;
+  selectDialogueAnswer(idx);
+  // Mark current dot as done
+  document.querySelectorAll('.dialogue-step-dot')[currentDialogueStep].classList.add('done');
+  document.querySelectorAll('.dialogue-step-dot')[currentDialogueStep].classList.remove('active');
+}
+
+function dialogueNext() {
+  if (currentDialogueStep >= dialogueSteps.length - 1) {
+    document.getElementById('dialogueCard').innerHTML = '<div class="dialogue-card-icon">🎓</div><div class="dialogue-card-layer" style="color:var(--accent-gold)">Diálogo Completo</div><div class="dialogue-card-question">Has completado el ejercicio de observación de La Gioconda. ArtIA puede seguir conversando contigo en el chat sobre cualquier aspecto que te haya intrigado.<br><br><em>"El arte nunca se termina, solo se abandona."</em> — Leonardo da Vinci</div><div class="dialogue-nav"><button class="btn btn-secondary" onclick="resetDialogue()">Reiniciar Diálogo</button><a href="#chat" class="btn btn-primary">Continuar en el Chat →</a></div>';
+    document.getElementById('dialogueNav').style.display = 'none';
+    // Mark last dot
+    document.querySelectorAll('.dialogue-step-dot')[currentDialogueStep].classList.add('done');
+    document.querySelectorAll('.dialogue-step-dot')[currentDialogueStep].classList.remove('active');
+    return;
+  }
+  currentDialogueStep++;
+  answeredCurrentStep = false;
+  renderDialogueStep();
+}
+
+function dialoguePrev() {
+  if (currentDialogueStep <= 0) return;
+  document.querySelectorAll('.dialogue-step-dot')[currentDialogueStep].classList.remove('done');
+  document.querySelectorAll('.dialogue-step-dot')[currentDialogueStep].classList.remove('active');
+  currentDialogueStep--;
+  answeredCurrentStep = false;
+  renderDialogueStep();
+}
+
+function renderDialogueStep() {
+  const step = dialogueSteps[currentDialogueStep];
+  document.getElementById('dialogueIcon').textContent = step.icon;
+  const layerEl = document.getElementById('dialogueLayer');
+  layerEl.textContent = step.layerLabel;
+  layerEl.className = 'dialogue-card-layer ' + step.layer;
+  document.getElementById('dialogueQuestion').textContent = step.question;
+
+  const answersEl = document.getElementById('dialogueAnswers');
+  answersEl.innerHTML = '';
+  step.answers.forEach((a, i) => {
+    answersEl.innerHTML += '<button class="dialogue-answer" onclick="dialogueAnswer(' + i + ')">' + a + '</button>';
+  });
+
+  document.getElementById('dialogueResponse').classList.remove('visible');
+  document.getElementById('dialogueResponse').innerHTML = '';
+
+  // Update dots
+  document.querySelectorAll('.dialogue-step-dot').forEach((dot, i) => {
+    dot.classList.remove('active');
+    if (i === currentDialogueStep) dot.classList.add('active');
+  });
+
+  document.getElementById('dialogueNav').style.display = 'none';
+}
+
+function resetDialogue() {
+  currentDialogueStep = 0;
+  answeredCurrentStep = false;
+  document.querySelectorAll('.dialogue-step-dot').forEach((dot, i) => {
+    dot.classList.remove('done');
+    dot.classList.remove('active');
+    if (i === 0) dot.classList.add('active');
+  });
+  renderDialogueStep();
+}
+
+// ===== ZOOM LENS =====
+const zoomLens = document.getElementById('zoomLens');
+const zoomCursor = document.getElementById('zoomCursor');
+const zoomImage = document.getElementById('zoomImage');
+
+zoomLens.addEventListener('mousemove', (e) => {
+  const rect = zoomLens.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const img = zoomImage;
+  zoomCursor.style.backgroundImage = 'url(' + img.src + ')';
+  zoomCursor.style.backgroundSize = (img.width * 2.5) + 'px ' + (img.height * 2.5) + 'px';
+  zoomCursor.style.backgroundPosition = (-(x * 2.5 - 60) + 'px ') + (-(y * 2.5 - 60) + 'px');
+  zoomCursor.style.left = (x - 60) + 'px';
+  zoomCursor.style.top = (y - 60) + 'px';
+});
+
+zoomLens.addEventListener('mouseleave', () => {
+  zoomCursor.style.display = 'none';
+});
+
+zoomLens.addEventListener('mouseenter', () => {
+  zoomCursor.style.display = 'block';
+});
+
+// ===== TOAST =====
+function showToast(msg, duration) {
+  duration = duration || 3000;
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  setTimeout(() => t.classList.remove('visible'), duration);
+}
+
+// ===== INIT =====
+initApiKeyModal();
+
+// Reveal animation on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.opacity = '1';
+      entry.target.style.transform = 'translateY(0)';
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.reveal-card, .step-card, .method-layer').forEach(el => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(30px)';
+  el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+  observer.observe(el);
+});
+</script>
+
+<!-- Reveal Modal -->
+<div class="reveal-modal-overlay" id="revealModal">
+  <div class="reveal-modal" id="revealModalContent">
+    <div class="reveal-modal-hero">
+      <img id="revealModalImg" src="" alt="Pintura" />
+      <button class="reveal-modal-close" onclick="closeRevealModal()">✕</button>
+    </div>
+    <div class="reveal-modal-body">
+      <div class="reveal-modal-meta">
+        <span class="reveal-modal-type" id="revealModalType"></span>
+      </div>
+      <h3 class="reveal-modal-title" id="revealModalTitle"></h3>
+      <div class="reveal-modal-painter" id="revealModalPainter"></div>
+      <div class="reveal-findings-list" id="revealModalFindings"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+</body>
+</html>
